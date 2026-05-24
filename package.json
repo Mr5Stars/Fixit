@@ -1,0 +1,15 @@
+{
+  "name": "fixit-pro-backend",
+  "version": "1.0.0",
+  "description": "FixIt Pro handyman booking backend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "@supabase/supabase-js": "^2.39.0",
+    "resend": "^3.0.0"
+  }
+}
