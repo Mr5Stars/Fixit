@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FixIt Pro – Handyman Booking</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: linear-gradient(135deg, #fdf6ec 0%, #f5e9d3 100%); min-height: 100vh; font-family: Georgia, serif; padding: 24px 16px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState } = React;
+
+    const SERVICES = [
+      { id: 1, name: "General Repairs", icon: "🔧", duration: "1 hr" },
+      { id: 2, name: "Plumbing Fix", icon: "🚿", duration: "1 hr" },
+      { id: 3, name: "Electrical Check", icon: "⚡", duration: "1 hr" },
+      { id: 4, name: "Carpentry Work", icon: "🪚", duration: "1 hr" },
+      { id: 5, name: "Painting", icon: "🖌️", duration: "1 hr" },
+      { id: 6, name: "Assembly", icon: "🪛", duration: "1 hr" },
+    ];
+
+    const TIMES = ["8:00 AM","9:00 AM","10:00 AM","11:00 AM","1:00 PM","2:00 PM","3:00 PM","4:00 PM"];
+
+    function getDays() {
+      const days = [];
+      const today = new Date();
+      const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+      const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      for (let i = 1; i <= 14; i++) {
+        const d = new Date(today);
+        d.setDate(today.getDate() + i);
+        if (d.getDay() !== 0) {
+          days.push({ label: dayNames[d.getDay()], date: d.getDate(), month: monthNames[d.getMonth()], full: d.toDateString() });
+        }
+      }
+      return days.slice(0, 10);
+    }
+
+    function Row({ label, value }) {
+      return (
+        <div style={{ display:"flex", justifyContent:"space-between", padding:"7px 0", borderBottom:"1px solid #f0ebe3" }}>
+          <span style={{ color:"#8a7968", fontSize:13 }}>{label}</span>
+          <span style={{ color:"#2c1f0e", fontWeight:500, fontSize:13, maxWidth:"60%", textAlign:"right" }}>{value}</span>
+        </div>
+      );
+    }
+
+    function App() {
+      const [step, setStep] = useState(1);
+      const [service, setService] = useState(null);
+      const [day, setDay] = useState(null);
+      const [time, setTime] = useState(null);
+      const [form, setForm] = useState({ name:"", email:"", phone:"", address:"", note:"" });
+      const [confirmed, setConfirmed] = useState(false);
+      const [loading, setLoading] = useState(false);
+      const [error, setError] = useState("");
+      const days = getDays();
+
+      const handleConfirm = async () => {
+        setLoading(true); setError("");
+        try {
+          const res = await fetch("https://fixit-production-dcd8.up.railway.app/book", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...form, service: service.name, date: `${day.label}, ${day.month} ${day.date}`, time }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "Something went wrong");
+          setConfirmed(true);
+        } catch (err) {
+          setError("Could not confirm booking. Please try again.");
+        } finally { setLoading(false); }
+      };
+
+      const s = { page:{ minHeight:"100vh" }, card:{ background:"#fff", borderRadius:18, padding:"28px 24px", boxShadow:"0 4px 32px rgba(44,31,14,0.08)", maxWidth:560, margin:"0 auto" }, btn:{ background:"#d4762a", color:"#fff", border:"none", borderRadius:10, padding:"13px 28px", fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"sans-serif" }, btnDisabled:{ opacity:0.35, cursor:"not-allowed" }, backBtn:{ background:"none", border:"1px solid #e0d5c8", color:"#8a7968", borderRadius:10, padding:"12px 20px", fontSize:14, cursor:"pointer", fontFamily:"sans-serif" }, confirmBtn:{ background:"#2c7a3e", color:"#fff", border:"none", borderRadius:10, padding:"13px 28px", fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"sans-serif" } };
+
+      if (confirmed) return (
+        <div style={{ maxWidth:420, margin:"60px auto", background:"#fff", borderRadius:20, padding:"40px 28px", textAlign:"center", boxShadow:"0 8px 40px rgba(44,31,14,0.1)" }}>
+          <div style={{ width:64, height:64, borderRadius:"50%", background:"#2c7a3e", color:"#fff", fontSize:28, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 20px" }}>✓</div>
+          <h2 style={{ fontSize:26, color:"#2c1f0e", marginBottom:8 }}>You're Booked!</h2>
+          <p style={{ color:"#8a7968", fontFamily:"sans-serif", marginBottom:24 }}>See you soon, {form.name.split(" ")[0]}!</p>
+          <div style={{ background:"#fdf6ec", borderRadius:12, padding:16, marginBottom:20, textAlign:"left" }}>
+            <Row label="Service" value={service?.name} />
+            <Row label="Date" value={`${day?.label}, ${day?.month} ${day?.date}`} />
+            <Row label="Time" value={time} />
+            <Row label="Address" value={form.address} />
+          </div>
+          <p style={{ fontSize:13, color:"#8a7968", fontFamily:"sans-serif", marginBottom:24 }}>📧 Confirmation sent to {form.email}</p>
+          <button style={{ ...s.btn }} onClick={() => { setStep(1); setService(null); setDay(null); setTime(null); setForm({ name:"",email:"",phone:"",address:"",note:"" }); setConfirmed(false); }}>Book Another</button>
+        </div>
+      );
+
+      return (
+        <div>
+          <div style={{ textAlign:"center", marginBottom:24 }}>
+            <div style={{ fontSize:26, fontWeight:700, color:"#2c1f0e" }}>🔨 FixIt Pro</div>
+            <div style={{ fontSize:13, color:"#8a7968", marginTop:4, fontStyle:"italic" }}>Professional Handyman Services</div>
+          </div>
+
+          <div style={{ display:"flex", justifyContent:"center", marginBottom:24 }}>
+            {["Service","Schedule","Details","Confirm"].map((label, i) => (
+              <div key={label} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:4, flex:1, maxWidth:80 }}>
+                <div style={{ width:28, height:28, borderRadius:"50%", background: step>i+1?"#2c7a3e": step===i+1?"#d4762a":"#e8ddd0", color: step>=i+1?"#fff":"#b0a090", fontSize:12, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  {step>i+1?"✓":i+1}
+                </div>
+                <span style={{ fontSize:10, color: step===i+1?"#d4762a":"#b0a090", fontFamily:"sans-serif", fontWeight: step===i+1?700:400 }}>{label}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={s.card}>
+            {step===1 && <>
+              <h2 style={{ fontSize:20, color:"#2c1f0e", marginBottom:20, fontWeight:700 }}>What do you need fixed?</h2>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12, marginBottom:24 }}>
+                {SERVICES.map(sv => (
+                  <div key={sv.id} onClick={() => setService(sv)} style={{ background: service?.id===sv.id?"#fff5e8":"#fdf6ec", border: `2px solid ${service?.id===sv.id?"#d4762a":"#f0e6d3"}`, borderRadius:12, padding:"16px 8px", textAlign:"center", cursor:"pointer" }}>
+                    <div style={{ fontSize:26, marginBottom:6 }}>{sv.icon}</div>
+                    <div style={{ fontSize:12, fontWeight:700, color:"#2c1f0e", fontFamily:"sans-serif" }}>{sv.name}</div>
+                    <div style={{ fontSize:11, color:"#d4762a", marginTop:3, fontFamily:"sans-serif" }}>{sv.duration}</div>
+                  </div>
+                ))}
+              </div>
+              <button style={{ ...s.btn, ...(service?{}:s.btnDisabled) }} disabled={!service} onClick={() => setStep(2)}>Continue →</button>
+            </>}
+
+            {step===2 && <>
+              <h2 style={{ fontSize:20, color:"#2c1f0e", marginBottom:20, fontWeight:700 }}>Pick a day & time</h2>
+              <div style={{ display:"flex", gap:8, overflowX:"auto", paddingBottom:8, marginBottom:20 }}>
+                {days.map(d => (
+                  <div key={d.full} onClick={() => setDay(d)} style={{ minWidth:52, background: day?.full===d.full?"#fff5e8":"#fdf6ec", border:`2px solid ${day?.full===d.full?"#d4762a":"#f0e6d3"}`, borderRadius:10, padding:"10px 6px", textAlign:"center", cursor:"pointer", flexShrink:0 }}>
+                    <div style={{ fontSize:10, color:"#8a7968", fontFamily:"sans-serif", textTransform:"uppercase" }}>{d.label}</div>
+                    <div style={{ fontSize:20, fontWeight:700, color:"#2c1f0e" }}>{d.date}</div>
+                    <div style={{ fontSize:10, color:"#8a7968", fontFamily:"sans-serif" }}>{d.month}</div>
+                  </div>
+                ))}
+              </div>
+              {day && <>
+                <p style={{ fontSize:13, color:"#8a7968", marginBottom:12, fontFamily:"sans-serif" }}>Available times for <b>{day.label}, {day.month} {day.date}</b></p>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:8, marginBottom:8 }}>
+                  {TIMES.map(t => (
+                    <div key={t} onClick={() => setTime(t)} style={{ background: time===t?"#fff5e8":"#fdf6ec", border:`2px solid ${time===t?"#d4762a":"#f0e6d3"}`, borderRadius:8, padding:"9px 4px", textAlign:"center", fontSize:12, cursor:"pointer", fontFamily:"sans-serif", color: time===t?"#d4762a":"#2c1f0e", fontWeight: time===t?700:400 }}>{t}</div>
+                  ))}
+                </div>
+              </>}
+              <div style={{ display:"flex", justifyContent:"space-between", marginTop:24 }}>
+                <button style={s.backBtn} onClick={() => setStep(1)}>← Back</button>
+                <button style={{ ...s.btn, ...(day&&time?{}:s.btnDisabled) }} disabled={!day||!time} onClick={() => setStep(3)}>Continue →</button>
+              </div>
+            </>}
+
+            {step===3 && <>
+              <h2 style={{ fontSize:20, color:"#2c1f0e", marginBottom:20, fontWeight:700 }}>Your details</h2>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:8 }}>
+                {[{key:"name",label:"Full Name",placeholder:"John Smith",type:"text"},{key:"email",label:"Email",placeholder:"john@email.com",type:"email"},{key:"phone",label:"Phone",placeholder:"(555) 000-0000",type:"tel"},{key:"address",label:"Service Address",placeholder:"123 Main St, City",type:"text"}].map(f => (
+                  <div key={f.key} style={{ display:"flex", flexDirection:"column", gap:5, ...(f.key==="address"?{gridColumn:"1/-1"}:{}) }}>
+                    <label style={{ fontSize:12, color:"#8a7968", fontFamily:"sans-serif", fontWeight:600 }}>{f.label}</label>
+                    <input style={{ border:"1.5px solid #e8ddd0", borderRadius:8, padding:"10px 12px", fontSize:14, fontFamily:"sans-serif", color:"#2c1f0e", outline:"none", background:"#fdf9f4" }} type={f.type} placeholder={f.placeholder} value={form[f.key]} onChange={e => setForm({...form,[f.key]:e.target.value})} />
+                  </div>
+                ))}
+                <div style={{ display:"flex", flexDirection:"column", gap:5, gridColumn:"1/-1" }}>
+                  <label style={{ fontSize:12, color:"#8a7968", fontFamily:"sans-serif", fontWeight:600 }}>Notes (optional)</label>
+                  <textarea style={{ border:"1.5px solid #e8ddd0", borderRadius:8, padding:"10px 12px", fontSize:14, fontFamily:"sans-serif", color:"#2c1f0e", outline:"none", background:"#fdf9f4", height:72, resize:"none" }} placeholder="Describe the issue..." value={form.note} onChange={e => setForm({...form,note:e.target.value})} />
+                </div>
+              </div>
+              <div style={{ display:"flex", justifyContent:"space-between", marginTop:24 }}>
+                <button style={s.backBtn} onClick={() => setStep(2)}>← Back</button>
+                <button style={{ ...s.btn, ...((form.name&&form.email&&form.phone&&form.address)?{}:s.btnDisabled) }} disabled={!(form.name&&form.email&&form.phone&&form.address)} onClick={() => setStep(4)}>Continue →</button>
+              </div>
+            </>}
+
+            {step===4 && <>
+              <h2 style={{ fontSize:20, color:"#2c1f0e", marginBottom:20, fontWeight:700 }}>Confirm your booking</h2>
+              <div style={{ background:"#fdf6ec", borderRadius:12, padding:"16px 18px", marginBottom:20 }}>
+                <Row label="Service" value={`${service?.icon} ${service?.name}`} />
+                <Row label="Date" value={`${day?.label}, ${day?.month} ${day?.date}`} />
+                <Row label="Time" value={time} />
+                <Row label="Address" value={form.address} />
+                <Row label="Name" value={form.name} />
+                <Row label="Email" value={form.email} />
+                <Row label="Phone" value={form.phone} />
+                {form.note && <Row label="Notes" value={form.note} />}
+              </div>
+              {error && <p style={{ color:"#c0392b", fontSize:13, fontFamily:"sans-serif", marginBottom:12, textAlign:"center" }}>{error}</p>}
+              <div style={{ display:"flex", justifyContent:"space-between", marginTop:24 }}>
+                <button style={s.backBtn} onClick={() => setStep(3)}>← Back</button>
+                <button style={s.confirmBtn} onClick={handleConfirm} disabled={loading}>{loading?"Confirming...":"Confirm Booking ✓"}</button>
+              </div>
+              <p style={{ textAlign:"center", fontSize:12, color:"#b0a090", fontFamily:"sans-serif", marginTop:12 }}>📧 A confirmation will be sent to your email</p>
+            </>}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
